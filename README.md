@@ -1,6 +1,8 @@
 # ERLC API Wrapper
 
-## Overview
+A comprehensive Node.js wrapper for the Emergency Response: Liberty County (ERLC) API with advanced features like automatic rate limiting, request queuing, intelligent caching, and real-time event monitoring.
+
+## Features
 
 - **Type Safety**: Full TypeScript-style JSDoc types for better development experience
 - **Rate Limiting**: Automatic rate limit handling with exponential backoff
@@ -9,216 +11,354 @@
 - **Error Handling**: Friendly error messages with detailed error codes
 - **Real-time Events**: Event subscription system for monitoring changes
 
-## New API Structure
+## Installation
 
-The new API is located in `/src/api/` with the following files:
+```bash
+npm install erlc-api-wrapper
+```
 
-- `index.js` - Main exports and client factory functions
-- `client.js` - Core ERLC API client
-- `types.js` - Type definitions and error handling
-- `rateLimiter.js` - Rate limiting implementation
-- `queue.js` - Request queue management
-- `cache.js` - Memory cache implementation
-- `subscription.js` - Real-time event subscription system
+## Project Structure
 
-## Client Initialization
+```
+api/
+├── index.js         # Main exports and client factory functions
+├── client.js        # Core ERLC API client
+├── types.js         # Type definitions and error handling
+├── rateLimiter.js   # Rate limiting implementation
+├── queue.js         # Request queue management
+├── cache.js         # Memory cache implementation
+└── subscription.js  # Real-time event subscription system
+```
 
-In your main `index.js`, the ERLC client is now initialized with:
+## Quick Start
 
 ```javascript
-const { newClientWithQueueAndCache } = require('./api');
+const { newClientWithQueueAndCache } = require('erlc-api-wrapper');
 
-// Initialize ERLC API client with rate limiting and caching
-const apiKey =
-  client.config.debugMode === 1 ? client.config.apiKey1 : client.config.apiKey;
-client.erlc = newClientWithQueueAndCache(
-  apiKey,
+// Initialize the client
+const client = newClientWithQueueAndCache(
+  'your-api-key-here',
   {
     workers: 2,
     interval: 200, // 200ms between requests
     ttl: 30000, // 30 second cache
   },
   {
-    baseURL: client.config.baseURL,
+    baseURL: 'https://api.policeroleplay.community/v1',
     timeout: 15000, // 15 second timeout
   }
 );
+
+// Use the API
+const serverData = await client.getServer();
+console.log('Server Info:', serverData);
 ```
 
 ## API Methods
 
-All ERLC API methods are now available through `client.erlc`:
+The wrapper provides access to all ERLC API endpoints:
 
 ### Server Information
 
 ```javascript
-const serverData = await client.erlc.getServer();
-const queueData = await client.erlc.getQueue();
-const bansData = await client.erlc.getBans();
+// Get server status and information
+const serverData = await client.getServer();
+
+// Get server queue information
+const queueData = await client.getQueue();
+
+// Get server ban list
+const bansData = await client.getBans();
 ```
 
 ### Player Data
 
 ```javascript
-const players = await client.erlc.getPlayers();
+// Get all players currently on the server
+const players = await client.getPlayers();
 ```
 
-### Logs
+### Logs and History
 
 ```javascript
-const commandLogs = await client.erlc.getCommandLogs();
-const modCalls = await client.erlc.getModCalls();
-const killLogs = await client.erlc.getKillLogs();
-const joinLogs = await client.erlc.getJoinLogs();
+// Get command execution logs
+const commandLogs = await client.getCommandLogs();
+
+// Get moderator call logs
+const modCalls = await client.getModCalls();
+
+// Get kill/death logs
+const killLogs = await client.getKillLogs();
+
+// Get player join/leave logs
+const joinLogs = await client.getJoinLogs();
 ```
 
 ### Vehicles
 
 ```javascript
-const vehicles = await client.erlc.getVehicles();
+// Get all vehicles on the server
+const vehicles = await client.getVehicles();
 ```
 
-### Commands
+### Command Execution
 
 ```javascript
-await client.erlc.executeCommand(':announce Hello World!');
+// Execute server commands
+await client.executeCommand(':announce Hello World!');
+await client.executeCommand(':kick PlayerName Reason');
 ```
 
 ## Error Handling
 
-The new wrapper provides enhanced error handling:
+The wrapper provides enhanced error handling with user-friendly messages:
 
 ```javascript
-const { getFriendlyErrorMessage } = require('./api');
+const { getFriendlyErrorMessage } = require('erlc-api-wrapper');
 
 try {
-  await client.erlc.executeCommand(':announce Test');
+  await client.executeCommand(':announce Test');
 } catch (error) {
   const friendlyMessage = getFriendlyErrorMessage(error);
   console.error('Command failed:', friendlyMessage);
 }
 ```
 
-## Real-time Events (Advanced)
+Common error scenarios handled:
 
-The wrapper supports real-time event monitoring:
+- Invalid API keys
+- Rate limit exceeded
+- Server timeouts
+- Network connectivity issues
+- Invalid command syntax
+
+## Real-time Event Monitoring
+
+Monitor server events in real-time with the subscription system:
 
 ```javascript
-const { EventType } = require('./api');
+const { EventType } = require('erlc-api-wrapper');
 
-const subscription = client.erlc.subscribe([
+// Create a subscription for multiple event types
+const subscription = client.subscribe([
   EventType.PLAYERS,
   EventType.COMMANDS,
   EventType.KILLS,
 ]);
 
+// Set up event handlers
 subscription.handle({
   playerHandler: (changes) => {
-    console.log('Player changes:', changes);
+    console.log('Player changes detected:', changes);
   },
   commandHandler: (logs) => {
-    console.log('New commands:', logs);
+    console.log('New commands executed:', logs);
   },
   killHandler: (kills) => {
-    console.log('New kills:', kills);
+    console.log('New kills recorded:', kills);
+  },
+});
+
+// Start monitoring
+await subscription.start();
+
+// Stop monitoring when done
+subscription.stop();
+```
+
+### Available Event Types
+
+- `EventType.PLAYERS` - Player join/leave events
+- `EventType.COMMANDS` - Command execution events
+- `EventType.KILLS` - Kill/death events
+- `EventType.MODCALLS` - Moderator call events
+- `EventType.JOINS` - Player join events
+- `EventType.BANS` - Ban/unban events
+
+## Configuration Options
+
+The wrapper supports various client configurations to suit your needs:
+
+### Basic Client
+
+```javascript
+const { newClient } = require('erlc-api-wrapper');
+const client = newClient('your-api-key');
+```
+
+### Client with Queue Management
+
+```javascript
+const { newClientWithQueue } = require('erlc-api-wrapper');
+const client = newClientWithQueue(
+  'your-api-key',
+  3, // 3 worker threads
+  500 // 500ms interval between requests
+);
+```
+
+### Client with Caching
+
+```javascript
+const { newClientWithCache } = require('erlc-api-wrapper');
+const client = newClientWithCache(
+  'your-api-key',
+  60000 // 60 second cache TTL
+);
+```
+
+### Full Configuration
+
+```javascript
+const { newClientWithQueueAndCache } = require('erlc-api-wrapper');
+const client = newClientWithQueueAndCache(
+  'your-api-key',
+  {
+    workers: 2, // Number of worker threads
+    interval: 200, // Milliseconds between requests
+    ttl: 30000, // Cache time-to-live in milliseconds
+  },
+  {
+    baseURL: 'https://api.policeroleplay.community/v1',
+    timeout: 15000, // Request timeout in milliseconds
+  }
+);
+```
+
+### Configuration Parameters
+
+| Parameter  | Description                          | Default          |
+| ---------- | ------------------------------------ | ---------------- |
+| `workers`  | Number of concurrent request workers | 1                |
+| `interval` | Milliseconds between requests        | 1000             |
+| `ttl`      | Cache time-to-live in milliseconds   | 60000            |
+| `baseURL`  | ERLC API base URL                    | Official API URL |
+| `timeout`  | Request timeout in milliseconds      | 10000            |
+
+## Benefits
+
+1. **Automatic Rate Limiting**: Built-in rate limit handling with exponential backoff
+2. **Request Queuing**: Prevents API overwhelm with intelligent request queuing
+3. **Intelligent Caching**: Reduces redundant API calls and improves performance
+4. **Enhanced Error Messages**: User-friendly error descriptions with detailed context
+5. **Type Safety**: Full JSDoc type definitions for better IDE support
+6. **Consistent API**: All methods follow the same pattern for predictability
+7. **Real-time Monitoring**: Event subscription system for live server monitoring
+8. **Future-Proof**: Designed for easy extension with new features
+
+## Examples
+
+### Basic Server Monitoring
+
+```javascript
+const { newClientWithQueueAndCache } = require('erlc-api-wrapper');
+
+const client = newClientWithQueueAndCache('your-api-key');
+
+async function monitorServer() {
+  try {
+    const server = await client.getServer();
+    console.log(`Server: ${server.name}`);
+    console.log(`Players: ${server.currentPlayers}/${server.maxPlayers}`);
+    console.log(`Queue: ${server.queueCount} waiting`);
+  } catch (error) {
+    console.error('Failed to get server info:', error.message);
+  }
+}
+
+// Monitor every 30 seconds
+setInterval(monitorServer, 30000);
+```
+
+### Command Execution with Error Handling
+
+```javascript
+async function executeServerCommand(command) {
+  try {
+    await client.executeCommand(command);
+    console.log(`Command executed successfully: ${command}`);
+  } catch (error) {
+    const friendlyMessage = getFriendlyErrorMessage(error);
+    console.error(`Command failed: ${friendlyMessage}`);
+  }
+}
+
+// Examples
+await executeServerCommand(':announce Server restart in 5 minutes');
+await executeServerCommand(':kick PlayerName Reason for kick');
+```
+
+### Real-time Player Monitoring
+
+```javascript
+const { EventType } = require('erlc-api-wrapper');
+
+const subscription = client.subscribe([EventType.PLAYERS]);
+
+subscription.handle({
+  playerHandler: (changes) => {
+    changes.joined.forEach((player) => {
+      console.log(`${player.username} joined the server`);
+    });
+
+    changes.left.forEach((player) => {
+      console.log(`${player.username} left the server`);
+    });
   },
 });
 
 await subscription.start();
 ```
 
-## Migrated Files
-
-The following files have been updated to use the new API wrapper:
-
-### Commands
-
-- `/src/Commands/ERLC/bans.js` - Now uses `client.erlc.getBans()`
-- `/src/Commands/ERLC/game.js` - Now uses `client.erlc.getServer()` and `client.erlc.getQueue()`
-- `/src/Commands/ERLC/x.js` - Now uses `client.erlc.executeCommand()`
-
-### Tasks
-
-- `/src/Tasks/joinLogs.js` - Now uses `client.erlc.getJoinLogs()`
-- `/src/Tasks/killLogs.js` - Now uses `client.erlc.getKillLogs()`
-- `/src/Tasks/modcallLogs.js` - Now uses `client.erlc.getModCalls()`
-- `/src/Tasks/reminders.js` - Now uses `client.erlc.executeCommand()`
-- `/src/Tasks/statistics.js` - Now uses `client.erlc.getServer()`
-
-### Events
-
-- `/src/Events/Vote/sessionVoteSystem.js` - Now uses `client.erlc.getServer()`
-
-## Benefits of the New Wrapper
-
-1. **Automatic Rate Limiting**: No more manual rate limit handling
-2. **Request Queuing**: Prevents overwhelming the API
-3. **Intelligent Caching**: Reduces redundant API calls
-4. **Better Error Messages**: User-friendly error descriptions
-5. **Type Safety**: Better IDE support and fewer runtime errors
-6. **Consistent API**: All methods follow the same pattern
-7. **Future-Proof**: Easy to extend with new features
-
-## Configuration Options
-
-You can customize the client behavior:
-
-```javascript
-// Basic client
-const client = newClient(apiKey);
-
-// With custom queue settings
-const client = newClientWithQueue(apiKey, 3, 500); // 3 workers, 500ms interval
-
-// With custom cache settings
-const client = newClientWithCache(apiKey, 60000); // 60 second cache
-
-// Full customization
-const client = newClientWithQueueAndCache(
-  apiKey,
-  {
-    workers: 2,
-    interval: 200,
-    ttl: 30000,
-  },
-  {
-    baseURL: 'https://api.policeroleplay.community/v1',
-    timeout: 15000,
-  }
-);
-```
-
-## Old Functions Removal
-
-The old ERLC functions in `/src/Functions/ERLC/` are no longer needed and can be safely removed:
-
-- `getBans.js`
-- `getJoinLogs.js`
-- `getKillLogs.js`
-- `getModcallLogs.js`
-- `getQueue.js`
-- `getServer.js`
-- `rateLimiter.js`
-- `runCommand.js`
-
-## Testing
-
-After migration, test the following to ensure everything works:
-
-1. Execute a command using `/x` slash command
-2. Check that game info displays correctly with `/game`
-3. Verify that logs are being processed (join/leave, kills, mod calls)
-4. Confirm that reminders are being sent
-5. Check that the statistics channel updates correctly
-
 ## Troubleshooting
 
-If you encounter issues:
+### Common Issues
 
-1. Check the console for error messages
-2. Verify your API key is correct in config.json
-3. Ensure the base URL is correct
-4. Check that your server has internet connectivity
-5. Review the error details provided by `getFriendlyErrorMessage()`
+#### Authentication Errors
 
-The new wrapper provides much more robust error handling and should give you clear information about any issues.
+- Verify your API key is correct and active
+- Check that the API key has the necessary permissions
+- Ensure you're using the correct base URL
+
+#### Rate Limiting
+
+- The wrapper automatically handles rate limits, but excessive requests may still cause delays
+- Consider increasing the `interval` parameter in queue configuration
+- Monitor your API usage to stay within limits
+
+#### Network Issues
+
+- Check your internet connectivity
+- Verify the ERLC API service is online
+- Increase the `timeout` parameter if requests are timing out
+
+#### Caching Issues
+
+- Clear cache by creating a new client instance
+- Adjust the `ttl` parameter for different cache durations
+- Use `client.clearCache()` if available
+
+### Getting Help
+
+1. Check the console for detailed error messages
+2. Use `getFriendlyErrorMessage()` for user-friendly error descriptions
+3. Review the error codes in the API response
+4. Check the ERLC API documentation for endpoint-specific issues
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## Changelog
+
+### v1.0.0
+
+- Initial release with full ERLC API coverage
+- Rate limiting and request queuing
+- Intelligent caching system
+- Real-time event monitoring
+- Enhanced error handling
