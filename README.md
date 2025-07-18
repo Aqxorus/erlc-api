@@ -11,12 +11,6 @@ A comprehensive Node.js wrapper for the Emergency Response: Liberty County (ERLC
 - **Error Handling**: Friendly error messages with detailed error codes
 - **Real-time Events**: Event subscription system for monitoring changes
 
-## Installation
-
-```bash
-npm install erlc-api-wrapper
-```
-
 ## Project Structure
 
 ```
